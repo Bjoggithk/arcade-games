@@ -7,7 +7,7 @@ const finalScoreEl = document.getElementById('finalScore');
 const rankInfoEl = document.getElementById('rankInfo');
 const top10ListEl = document.getElementById('top10List');
 const retryBtn = document.getElementById('retryBtn');
-const backBtn = document.getElementById('backBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 
 const SCORES_KEY = 'game2048TopScores';
 const GRID_SIZE = 4;
@@ -18,6 +18,8 @@ let grid = [];
 let score = 0;
 let isGameOver = false;
 let isPaused = false;
+let touchStartX = 0;
+let touchStartY = 0;
 
 function getTopScores() {
     const scores = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
@@ -68,18 +70,9 @@ function addRandomTile() {
 
 function getTileColor(value) {
     const colors = {
-        0: '#16213e',
-        2: '#00ff88',
-        4: '#00cc6a',
-        8: '#00aa55',
-        16: '#008844',
-        32: '#ffaa00',
-        64: '#ff8800',
-        128: '#ff6600',
-        256: '#ff4400',
-        512: '#ff2200',
-        1024: '#ff0000',
-        2048: '#cc00cc'
+        0: '#16213e', 2: '#00ff88', 4: '#00cc6a', 8: '#00aa55',
+        16: '#008844', 32: '#ffaa00', 64: '#ff8800', 128: '#ff6600',
+        256: '#ff4400', 512: '#ff2200', 1024: '#ff0000', 2048: '#cc00cc'
     };
     return colors[value] || '#aa00aa';
 }
@@ -93,12 +86,10 @@ function draw() {
             const value = grid[r][c];
             const x = c * (TILE_SIZE + TILE_PADDING) + TILE_PADDING;
             const y = r * (TILE_SIZE + TILE_PADDING) + TILE_PADDING;
-
             ctx.fillStyle = getTileColor(value);
             ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-
             if (value !== 0) {
-                ctx.fillStyle = value > 4 ? '#1a1a2e' : '#1a1a2e';
+                ctx.fillStyle = '#1a1a2e';
                 ctx.font = value >= 1000 ? 'bold 28px sans-serif' : 'bold 36px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -115,7 +106,7 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('Press Space to resume', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText('Tap pause button', canvas.width / 2, canvas.height / 2 + 40);
     }
 }
 
@@ -139,13 +130,9 @@ function move(direction) {
     const oldGrid = grid.map(row => [...row]);
 
     if (direction === 'left') {
-        for (let r = 0; r < GRID_SIZE; r++) {
-            grid[r] = slide(grid[r]);
-        }
+        for (let r = 0; r < GRID_SIZE; r++) grid[r] = slide(grid[r]);
     } else if (direction === 'right') {
-        for (let r = 0; r < GRID_SIZE; r++) {
-            grid[r] = slide(grid[r].reverse()).reverse();
-        }
+        for (let r = 0; r < GRID_SIZE; r++) grid[r] = slide(grid[r].reverse()).reverse();
     } else if (direction === 'up') {
         for (let c = 0; c < GRID_SIZE; c++) {
             let col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]];
@@ -190,7 +177,6 @@ function gameOver() {
     isPaused = false;
     const topScores = saveScore(score);
     finalScoreEl.textContent = score;
-
     const rank = topScores.indexOf(score) + 1;
     if (rank <= 10 && rank > 0) {
         rankInfoEl.textContent = `You placed #${rank} in the Top 10!`;
@@ -204,7 +190,6 @@ function gameOver() {
         rankInfoEl.textContent = 'Not in Top 10 this time.';
         top10ListEl.style.display = 'none';
     }
-
     overlay.classList.add('active');
     updateTop5Display();
 }
@@ -228,42 +213,46 @@ function togglePause() {
 
 document.addEventListener('keydown', (e) => {
     if (isGameOver) return;
-
     if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
         togglePause();
         return;
     }
-
     if (isPaused) return;
-
     let moved = false;
     switch (e.key.toLowerCase()) {
-        case 'arrowleft':
-        case 'a':
-            moved = move('left');
-            break;
-        case 'arrowright':
-        case 'd':
-            moved = move('right');
-            break;
-        case 'arrowup':
-        case 'w':
-            moved = move('up');
-            break;
-        case 'arrowdown':
-        case 's':
-            moved = move('down');
-            break;
+        case 'arrowleft': case 'a': moved = move('left'); break;
+        case 'arrowright': case 'd': moved = move('right'); break;
+        case 'arrowup': case 'w': moved = move('up'); break;
+        case 'arrowdown': case 's': moved = move('down'); break;
     }
     if (moved) draw();
 });
 
-retryBtn.addEventListener('click', startGame);
-backBtn.addEventListener('click', () => {
-    window.location.href = 'index.html';
-});
+// Touch swipe
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+}, {passive: false});
 
-// Init
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (isPaused || isGameOver) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return;
+    let moved = false;
+    if (Math.abs(dx) > Math.abs(dy)) {
+        moved = move(dx > 0 ? 'right' : 'left');
+    } else {
+        moved = move(dy > 0 ? 'down' : 'up');
+    }
+    if (moved) draw();
+}, {passive: false});
+
+if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
+retryBtn.addEventListener('click', startGame);
+
 updateTop5Display();
 startGame();
