@@ -8,7 +8,7 @@ const finalScoreEl = document.getElementById('finalScore');
 const rankInfoEl = document.getElementById('rankInfo');
 const top10ListEl = document.getElementById('top10List');
 const retryBtn = document.getElementById('retryBtn');
-const backBtn = document.getElementById('backBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 
 const SCORES_KEY = 'minesweeperTopScores';
 const ROWS = 10;
@@ -27,7 +27,7 @@ let firstClick = true;
 
 function getTopScores() {
     const scores = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
-    return scores.sort((a, b) => a - b).slice(0, 10); // lower time is better
+    return scores.sort((a, b) => a - b).slice(0, 10);
 }
 
 function saveScore(time) {
@@ -58,7 +58,6 @@ function initGrid() {
     grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
     revealed = Array(ROWS).fill().map(() => Array(COLS).fill(false));
     flagged = Array(ROWS).fill().map(() => Array(COLS).fill(false));
-    // Place mines later on first click
 }
 
 function placeMines(safeR, safeC) {
@@ -71,7 +70,6 @@ function placeMines(safeR, safeC) {
             placed++;
         }
     }
-    // Calculate numbers
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
             if (grid[r][c] === -1) continue;
@@ -90,14 +88,12 @@ function placeMines(safeR, safeC) {
 function draw() {
     ctx.fillStyle = '#0f0f23';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
             const x = c * CELL;
             const y = r * CELL;
             ctx.strokeStyle = '#00ff88';
             ctx.strokeRect(x, y, CELL, CELL);
-
             if (revealed[r][c]) {
                 ctx.fillStyle = '#16213e';
                 ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
@@ -122,7 +118,6 @@ function draw() {
             }
         }
     }
-
     if (isPaused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -131,7 +126,7 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('Press Space to resume', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText('Tap pause button', canvas.width / 2, canvas.height / 2 + 40);
     }
 }
 
@@ -140,9 +135,7 @@ function reveal(r, c) {
     revealed[r][c] = true;
     if (grid[r][c] === 0) {
         for (let dr = -1; dr <= 1; dr++) {
-            for (let dc = -1; dc <= 1; dc++) {
-                reveal(r + dr, c + dc);
-            }
+            for (let dc = -1; dc <= 1; dc++) reveal(r + dr, c + dc);
         }
     }
 }
@@ -150,9 +143,7 @@ function reveal(r, c) {
 function checkWin() {
     let revealedCount = 0;
     for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-            if (revealed[r][c]) revealedCount++;
-        }
+        for (let c = 0; c < COLS; c++) if (revealed[r][c]) revealedCount++;
     }
     return revealedCount === ROWS * COLS - MINES;
 }
@@ -163,7 +154,6 @@ function gameOver(won = false) {
     const time = Math.floor((Date.now() - startTime) / 1000);
     finalScoreEl.textContent = time;
     overlayTitle.textContent = won ? 'You Win!' : 'Game Over';
-
     if (won) {
         const topScores = saveScore(time);
         const rank = topScores.indexOf(time) + 1;
@@ -183,7 +173,6 @@ function gameOver(won = false) {
         rankInfoEl.textContent = 'Hit a mine!';
         top10ListEl.style.display = 'none';
     }
-
     overlay.classList.add('active');
     updateTop5Display();
 }
@@ -199,8 +188,7 @@ function startGame() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         if (!isPaused && !isGameOver) {
-            const t = Math.floor((Date.now() - startTime) / 1000);
-            currentScoreEl.textContent = t + 's';
+            currentScoreEl.textContent = Math.floor((Date.now() - startTime) / 1000) + 's';
         }
     }, 1000);
     updateTop5Display();
@@ -219,12 +207,10 @@ canvas.addEventListener('click', (e) => {
     const c = Math.floor((e.clientX - rect.left) / CELL);
     const r = Math.floor((e.clientY - rect.top) / CELL);
     if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
-
     if (firstClick) {
         placeMines(r, c);
         firstClick = false;
     }
-
     if (flagged[r][c]) return;
     if (grid[r][c] === -1) {
         revealed[r][c] = true;
@@ -255,10 +241,8 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
 retryBtn.addEventListener('click', startGame);
-backBtn.addEventListener('click', () => {
-    window.location.href = 'index.html';
-});
 
 updateTop5Display();
 startGame();
