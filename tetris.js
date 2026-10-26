@@ -16,7 +16,7 @@ const SCORES_KEY = 'tetrisTopScores';
 const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
-const HOLD_BLOCK = 20;
+const HOLD_BLOCK = 18;
 
 const SHAPES = {
     I: [[1,1,1,1]],
@@ -49,6 +49,7 @@ let dropInterval = 800;
 let lastDrop = 0;
 let isGameOver = false;
 let isPaused = false;
+let animId = null;
 
 function getTopScores() {
     const scores = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
@@ -103,19 +104,21 @@ function rotate(shape) {
 }
 
 function collides(piece, dx = 0, dy = 0, shape = piece.shape) {
+    if (!piece) return true;
     for (let r = 0; r < shape.length; r++) {
         for (let c = 0; c < shape[r].length; c++) {
             if (!shape[r][c]) continue;
             const nx = piece.x + c + dx;
             const ny = piece.y + r + dy;
             if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
-            if (ny >= 0 && board[ny][nx]) return true;
+            if (ny >= 0 && board[ny] && board[ny][nx]) return true;
         }
     }
     return false;
 }
 
 function lockPiece() {
+    if (!current) return;
     current.shape.forEach((row, r) => {
         row.forEach((val, c) => {
             if (val && current.y + r >= 0) {
@@ -167,6 +170,7 @@ function spawnPiece() {
 }
 
 function drawHold() {
+    holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
     holdCtx.fillStyle = '#0f0f23';
     holdCtx.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
     if (!hold) return;
@@ -174,8 +178,10 @@ function drawHold() {
     const shape = hold.shape;
     const rows = shape.length;
     const cols = shape[0].length;
-    const offsetX = (holdCanvas.width - cols * HOLD_BLOCK) / 2;
-    const offsetY = (holdCanvas.height - rows * HOLD_BLOCK) / 2;
+    const totalW = cols * HOLD_BLOCK;
+    const totalH = rows * HOLD_BLOCK;
+    const offsetX = Math.floor((holdCanvas.width - totalW) / 2);
+    const offsetY = Math.floor((holdCanvas.height - totalH) / 2);
 
     shape.forEach((row, r) => {
         row.forEach((val, c) => {
@@ -188,7 +194,7 @@ function drawHold() {
 }
 
 function holdPiece() {
-    if (!canHold || isPaused || isGameOver) return;
+    if (!canHold || isPaused || isGameOver || !current) return;
     canHold = false;
     if (!hold) {
         hold = { type: current.type, shape: SHAPES[current.type].map(r => [...r]) };
@@ -211,25 +217,31 @@ function draw() {
     ctx.fillStyle = '#0f0f23';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Board
+    // Grid lines
+    ctx.strokeStyle = '#16213e';
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-            if (board[r][c]) {
-                ctx.fillStyle = COLORS[board[r][c]];
-                ctx.fillRect(c * BLOCK, r * BLOCK, BLOCK - 1, BLOCK - 1);
-            }
-            ctx.strokeStyle = '#16213e';
             ctx.strokeRect(c * BLOCK, r * BLOCK, BLOCK, BLOCK);
         }
     }
 
+    // Locked pieces
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (board[r][c]) {
+                ctx.fillStyle = COLORS[board[r][c]] || '#fff';
+                ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+            }
+        }
+    }
+
     // Current piece
-    if (current) {
+    if (current && current.shape) {
         current.shape.forEach((row, r) => {
             row.forEach((val, c) => {
                 if (val) {
                     ctx.fillStyle = COLORS[current.type];
-                    ctx.fillRect((current.x + c) * BLOCK, (current.y + r) * BLOCK, BLOCK - 1, BLOCK - 1);
+                    ctx.fillRect((current.x + c) * BLOCK + 1, (current.y + r) * BLOCK + 1, BLOCK - 2, BLOCK - 2);
                 }
             });
         });
@@ -250,19 +262,20 @@ function draw() {
 function update(time = 0) {
     if (isPaused || isGameOver) return;
     if (time - lastDrop > dropInterval) {
-        if (!collides(current, 0, 1)) {
+        if (current && !collides(current, 0, 1)) {
             current.y++;
-        } else {
+        } else if (current) {
             lockPiece();
         }
         lastDrop = time;
     }
     draw();
-    if (!isGameOver) requestAnimationFrame(update);
+    if (!isGameOver) animId = requestAnimationFrame(update);
 }
 
 function gameOver() {
     isGameOver = true;
+    if (animId) cancelAnimationFrame(animId);
     const topScores = saveScore(score);
     finalScoreEl.textContent = score;
     const rank = topScores.indexOf(score) + 1;
@@ -283,6 +296,7 @@ function gameOver() {
 }
 
 function startGame() {
+    if (animId) cancelAnimationFrame(animId);
     board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
     score = 0;
     level = 1;
@@ -299,7 +313,7 @@ function startGame() {
     updateTop5Display();
     spawnPiece();
     lastDrop = performance.now();
-    requestAnimationFrame(update);
+    animId = requestAnimationFrame(update);
     draw();
 }
 
@@ -308,7 +322,9 @@ function togglePause() {
     isPaused = !isPaused;
     if (!isPaused) {
         lastDrop = performance.now();
-        requestAnimationFrame(update);
+        animId = requestAnimationFrame(update);
+    } else if (animId) {
+        cancelAnimationFrame(animId);
     }
     draw();
 }
@@ -322,7 +338,7 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    if (isPaused) return;
+    if (isPaused || !current) return;
 
     switch (e.key.toLowerCase()) {
         case 'arrowleft':
