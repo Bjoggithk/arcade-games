@@ -7,11 +7,11 @@ const finalScoreEl = document.getElementById('finalScore');
 const rankInfoEl = document.getElementById('rankInfo');
 const top10ListEl = document.getElementById('top10List');
 const retryBtn = document.getElementById('retryBtn');
-const backBtn = document.getElementById('backBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 
 const SCORES_KEY = 'whackTopScores';
 const HOLES = 9;
-const GAME_TIME = 30; // seconds
+const GAME_TIME = 30;
 
 let moles = Array(HOLES).fill(false);
 let score = 0;
@@ -62,7 +62,6 @@ function getHolePos(i) {
 function draw() {
     ctx.fillStyle = '#0f0f23';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     for (let i = 0; i < HOLES; i++) {
         const { x, y, size } = getHolePos(i);
         ctx.fillStyle = '#16213e';
@@ -72,13 +71,11 @@ function draw() {
         ctx.strokeStyle = '#00ff88';
         ctx.lineWidth = 3;
         ctx.stroke();
-
         if (moles[i]) {
             ctx.fillStyle = '#00cc6a';
             ctx.beginPath();
             ctx.arc(x + size/2, y + size/2 - 10, 25, 0, Math.PI * 2);
             ctx.fill();
-            // Eyes
             ctx.fillStyle = '#1a1a2e';
             ctx.beginPath();
             ctx.arc(x + size/2 - 8, y + size/2 - 15, 4, 0, Math.PI * 2);
@@ -86,13 +83,10 @@ function draw() {
             ctx.fill();
         }
     }
-
-    // Timer
     ctx.fillStyle = '#00ff88';
     ctx.font = 'bold 20px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(`Time: ${timeLeft}s`, canvas.width / 2, 25);
-
     if (isPaused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -100,7 +94,7 @@ function draw() {
         ctx.font = 'bold 30px sans-serif';
         ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('Press Space to resume', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText('Tap pause button', canvas.width / 2, canvas.height / 2 + 40);
     }
 }
 
@@ -121,7 +115,6 @@ function gameOver() {
     clearInterval(moleTimer);
     const topScores = saveScore(score);
     finalScoreEl.textContent = score;
-
     const rank = topScores.indexOf(score) + 1;
     if (rank <= 10 && rank > 0) {
         rankInfoEl.textContent = `You placed #${rank} in the Top 10!`;
@@ -135,7 +128,6 @@ function gameOver() {
         rankInfoEl.textContent = 'Not in Top 10 this time.';
         top10ListEl.style.display = 'none';
     }
-
     overlay.classList.add('active');
     updateTop5Display();
 }
@@ -149,7 +141,6 @@ function startGame() {
     currentScoreEl.textContent = '0';
     overlay.classList.remove('active');
     updateTop5Display();
-
     clearInterval(gameLoop);
     clearInterval(moleTimer);
     gameLoop = setInterval(() => {
@@ -174,13 +165,10 @@ canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
-
     for (let i = 0; i < HOLES; i++) {
         if (moles[i]) {
             const { x, y, size } = getHolePos(i);
-            const cx = x + size/2;
-            const cy = y + size/2;
-            const dist = Math.hypot(mx - cx, my - cy);
+            const dist = Math.hypot(mx - (x + size/2), my - (y + size/2));
             if (dist < 30) {
                 score++;
                 moles[i] = false;
@@ -192,6 +180,13 @@ canvas.addEventListener('click', (e) => {
     }
 });
 
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    // Trigger click-like behavior
+    const touch = e.touches[0];
+    canvas.dispatchEvent(new MouseEvent('click', { clientX: touch.clientX, clientY: touch.clientY }));
+}, {passive: false});
+
 document.addEventListener('keydown', (e) => {
     if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
@@ -199,10 +194,8 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
 retryBtn.addEventListener('click', startGame);
-backBtn.addEventListener('click', () => {
-    window.location.href = 'index.html';
-});
 
 updateTop5Display();
 startGame();
