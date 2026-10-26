@@ -7,7 +7,7 @@ const finalScoreEl = document.getElementById('finalScore');
 const rankInfoEl = document.getElementById('rankInfo');
 const top10ListEl = document.getElementById('top10List');
 const retryBtn = document.getElementById('retryBtn');
-const backBtn = document.getElementById('backBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 
 const SCORES_KEY = 'flappyTopScores';
 
@@ -64,7 +64,6 @@ function draw() {
     ctx.fillStyle = '#0f0f23';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Pipes
     pipes.forEach(pipe => {
         ctx.fillStyle = '#00ff88';
         ctx.fillRect(pipe.x, 0, pipe.width, pipe.topHeight);
@@ -74,7 +73,6 @@ function draw() {
         ctx.strokeRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY);
     });
 
-    // Bird
     ctx.beginPath();
     ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
     ctx.fillStyle = '#ff4444';
@@ -89,21 +87,16 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('Press Space to resume', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText('Tap pause button', canvas.width / 2, canvas.height / 2 + 40);
     }
 }
 
 function update() {
     if (isPaused || isGameOver) return;
-
     bird.velocity += bird.gravity;
     bird.y += bird.velocity;
-
-    // Spawn pipes
     if (frame % 90 === 0) spawnPipe();
     frame++;
-
-    // Move pipes
     pipes.forEach(pipe => {
         pipe.x -= 3;
         if (!pipe.scored && pipe.x + pipe.width < bird.x) {
@@ -113,8 +106,6 @@ function update() {
         }
     });
     pipes = pipes.filter(p => p.x > -60);
-
-    // Collisions
     if (bird.y - bird.radius < 0 || bird.y + bird.radius > canvas.height) {
         gameOver();
         return;
@@ -134,7 +125,6 @@ function gameOver() {
     clearInterval(gameLoop);
     const topScores = saveScore(score);
     finalScoreEl.textContent = score;
-
     const rank = topScores.indexOf(score) + 1;
     if (rank <= 10 && rank > 0) {
         rankInfoEl.textContent = `You placed #${rank} in the Top 10!`;
@@ -148,7 +138,6 @@ function gameOver() {
         rankInfoEl.textContent = 'Not in Top 10 this time.';
         top10ListEl.style.display = 'none';
     }
-
     overlay.classList.add('active');
     updateTop5Display();
 }
@@ -200,11 +189,13 @@ document.addEventListener('keydown', (e) => {
 });
 
 canvas.addEventListener('click', flap);
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    flap();
+}, {passive: false});
 
+if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
 retryBtn.addEventListener('click', startGame);
-backBtn.addEventListener('click', () => {
-    window.location.href = 'index.html';
-});
 
 updateTop5Display();
 startGame();
