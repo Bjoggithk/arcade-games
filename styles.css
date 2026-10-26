@@ -52,7 +52,6 @@ h1 {
     margin-bottom: 10px;
 }
 
-/* Snake game styles */
 .game-container {
     display: flex;
     gap: 20px;
@@ -69,6 +68,31 @@ canvas {
     border: 3px solid #00ff88;
     background: #0f0f23;
     border-radius: 5px;
+    touch-action: none;
+}
+
+.pause-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 255, 136, 0.2);
+    border: 2px solid #00ff88;
+    color: #00ff88;
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.pause-btn:hover {
+    background: rgba(0, 255, 136, 0.4);
 }
 
 .scoreboard {
