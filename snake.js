@@ -7,7 +7,7 @@ const finalScoreEl = document.getElementById('finalScore');
 const rankInfoEl = document.getElementById('rankInfo');
 const top10ListEl = document.getElementById('top10List');
 const retryBtn = document.getElementById('retryBtn');
-const backBtn = document.getElementById('backBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 
 const GRID_SIZE = 20;
 const TILE_COUNT = canvas.width / GRID_SIZE;
@@ -19,6 +19,8 @@ let score = 0;
 let gameLoop;
 let isGameOver = false;
 let isPaused = false;
+let touchStartX = 0;
+let touchStartY = 0;
 
 const SCORES_KEY = 'snakeTopScores';
 
@@ -44,7 +46,6 @@ function updateTop5Display() {
         li.classList.add('top5');
         top5ListEl.appendChild(li);
     });
-    // Fill empty if less than 5
     for (let i = scores.length; i < 5; i++) {
         const li = document.createElement('li');
         li.innerHTML = `<span class="rank">#${i + 1}</span><span class="score-value">---</span>`;
@@ -53,21 +54,17 @@ function updateTop5Display() {
 }
 
 function draw() {
-    // Clear
     ctx.fillStyle = '#0f0f23';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw food
     ctx.fillStyle = '#ff4444';
     ctx.fillRect(food.x * GRID_SIZE, food.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
 
-    // Draw snake
     snake.forEach((segment, index) => {
         ctx.fillStyle = index === 0 ? '#00cc6a' : '#00ff88';
         ctx.fillRect(segment.x * GRID_SIZE, segment.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
     });
 
-    // Draw pause indicator
     if (isPaused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -76,7 +73,7 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('Press Space to resume', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText('Tap pause or Space', canvas.width / 2, canvas.height / 2 + 40);
     }
 }
 
@@ -85,13 +82,11 @@ function update() {
 
     const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
 
-    // Wall collision
     if (head.x < 0 || head.x >= TILE_COUNT || head.y < 0 || head.y >= TILE_COUNT) {
         gameOver();
         return;
     }
 
-    // Self collision
     if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
         gameOver();
         return;
@@ -99,7 +94,6 @@ function update() {
 
     snake.unshift(head);
 
-    // Eat food
     if (head.x === food.x && head.y === food.y) {
         score++;
         currentScoreEl.textContent = score;
@@ -127,7 +121,6 @@ function gameOver() {
     if (rank <= 10 && rank > 0) {
         rankInfoEl.textContent = `You placed #${rank} in the Top 10!`;
         rankInfoEl.style.display = 'block';
-        // Show top 10 with better formatting
         top10ListEl.innerHTML = '<ol>' + topScores.map((s, i) => {
             const cls = i < 5 ? ' class="top5"' : '';
             return `<li${cls}><span class="rank">#${i + 1}</span><span class="score-value">${s}</span></li>`;
@@ -174,44 +167,52 @@ function togglePause() {
     draw();
 }
 
-// Controls
+function setDirection(dx, dy) {
+    if (isPaused || isGameOver) return;
+    if (dx !== 0 && direction.x === 0) direction = {x: dx, y: 0};
+    if (dy !== 0 && direction.y === 0) direction = {x: 0, y: dy};
+}
+
 document.addEventListener('keydown', (e) => {
     if (isGameOver) return;
-
-    // Pause with space
     if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
         togglePause();
         return;
     }
-
     if (isPaused) return;
-
     switch (e.key.toLowerCase()) {
-        case 'arrowup':
-        case 'w':
-            if (direction.y === 0) direction = {x: 0, y: -1};
-            break;
-        case 'arrowdown':
-        case 's':
-            if (direction.y === 0) direction = {x: 0, y: 1};
-            break;
-        case 'arrowleft':
-        case 'a':
-            if (direction.x === 0) direction = {x: -1, y: 0};
-            break;
-        case 'arrowright':
-        case 'd':
-            if (direction.x === 0) direction = {x: 1, y: 0};
-            break;
+        case 'arrowup': case 'w': setDirection(0, -1); break;
+        case 'arrowdown': case 's': setDirection(0, 1); break;
+        case 'arrowleft': case 'a': setDirection(-1, 0); break;
+        case 'arrowright': case 'd': setDirection(1, 0); break;
     }
 });
 
-retryBtn.addEventListener('click', startGame);
-backBtn.addEventListener('click', () => {
-    window.location.href = 'index.html';
-});
+// Touch swipe controls
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+}, {passive: false});
 
-// Init
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const dx = touchEndX - touchStartX;
+    const dy = touchEndY - touchStartY;
+    if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return; // ignore taps
+    if (Math.abs(dx) > Math.abs(dy)) {
+        setDirection(dx > 0 ? 1 : -1, 0);
+    } else {
+        setDirection(0, dy > 0 ? 1 : -1);
+    }
+}, {passive: false});
+
+if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
+
+retryBtn.addEventListener('click', startGame);
+
 updateTop5Display();
 startGame();
