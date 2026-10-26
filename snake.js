@@ -61,12 +61,9 @@ function draw() {
     ctx.fillRect(food.x * GRID_SIZE, food.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
 
     // Draw snake
-    ctx.fillStyle = '#00ff88';
     snake.forEach((segment, index) => {
+        ctx.fillStyle = index === 0 ? '#00cc6a' : '#00ff88';
         ctx.fillRect(segment.x * GRID_SIZE, segment.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
-        if (index === 0) {
-            ctx.fillStyle = '#00cc6a'; // head slightly different
-        }
     });
 }
 
