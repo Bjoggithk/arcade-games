@@ -45,7 +45,6 @@ let level = 1;
 let lines = 0;
 let dropInterval = 800;
 let lastDrop = 0;
-let gameLoop;
 let isGameOver = false;
 let isPaused = false;
 
@@ -124,6 +123,16 @@ function lockPiece() {
     });
     clearLines();
     spawnPiece();
+}
+
+function hardDrop() {
+    if (!current || isPaused || isGameOver) return;
+    while (!collides(current, 0, 1)) {
+        current.y++;
+        score += 2; // small bonus for hard drop
+    }
+    currentScoreEl.textContent = score;
+    lockPiece();
 }
 
 function clearLines() {
@@ -211,7 +220,7 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('Space to resume', canvas.width / 2, canvas.height / 2 + 35);
+        ctx.fillText('Press Q to resume', canvas.width / 2, canvas.height / 2 + 35);
     }
 }
 
@@ -283,11 +292,14 @@ function togglePause() {
 
 document.addEventListener('keydown', (e) => {
     if (isGameOver) return;
-    if (e.key === ' ' || e.code === 'Space') {
+
+    // Pause with Q
+    if (e.key.toLowerCase() === 'q') {
         e.preventDefault();
         togglePause();
         return;
     }
+
     if (isPaused) return;
 
     switch (e.key.toLowerCase()) {
@@ -307,6 +319,11 @@ document.addEventListener('keydown', (e) => {
         case 'w':
             const rotated = rotate(current.shape);
             if (!collides(current, 0, 0, rotated)) current.shape = rotated;
+            break;
+        case ' ':
+        case 'space':
+            e.preventDefault();
+            hardDrop();
             break;
         case 'c':
         case 'h':
