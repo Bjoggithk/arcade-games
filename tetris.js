@@ -12,6 +12,7 @@ const finalScoreEl = document.getElementById('finalScore');
 const rankInfoEl = document.getElementById('rankInfo');
 const top10ListEl = document.getElementById('top10List');
 const retryBtn = document.getElementById('retryBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 
 const SCORES_KEY = 'tetrisTopScores';
 const COLS = 10;
@@ -21,23 +22,14 @@ const HOLD_BLOCK = 18;
 const NEXT_BLOCK = 14;
 
 const SHAPES = {
-    I: [[1,1,1,1]],
-    O: [[1,1],[1,1]],
-    T: [[0,1,0],[1,1,1]],
-    S: [[0,1,1],[1,1,0]],
-    Z: [[1,1,0],[0,1,1]],
-    J: [[1,0,0],[1,1,1]],
-    L: [[0,0,1],[1,1,1]]
+    I: [[1,1,1,1]], O: [[1,1],[1,1]], T: [[0,1,0],[1,1,1]],
+    S: [[0,1,1],[1,1,0]], Z: [[1,1,0],[0,1,1]],
+    J: [[1,0,0],[1,1,1]], L: [[0,0,1],[1,1,1]]
 };
 
 const COLORS = {
-    I: '#00ffff',
-    O: '#ffff00',
-    T: '#aa00ff',
-    S: '#00ff88',
-    Z: '#ff4444',
-    J: '#4444ff',
-    L: '#ffaa00'
+    I: '#00ffff', O: '#ffff00', T: '#aa00ff', S: '#00ff88',
+    Z: '#ff4444', J: '#4444ff', L: '#ffaa00'
 };
 
 let board = [];
@@ -53,6 +45,8 @@ let lastDrop = 0;
 let isGameOver = false;
 let isPaused = false;
 let animId = null;
+let touchStartX = 0;
+let touchStartY = 0;
 
 function getTopScores() {
     const scores = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
@@ -86,12 +80,7 @@ function updateTop5Display() {
 function randomPiece() {
     const keys = Object.keys(SHAPES);
     const type = keys[Math.floor(Math.random() * keys.length)];
-    return {
-        type,
-        shape: SHAPES[type].map(row => [...row]),
-        x: 3,
-        y: 0
-    };
+    return { type, shape: SHAPES[type].map(row => [...row]), x: 3, y: 0 };
 }
 
 function rotate(shape) {
@@ -123,9 +112,7 @@ function collides(piece, dx = 0, dy = 0, shape = piece.shape) {
 function getGhostY() {
     if (!current) return 0;
     let ghostY = current.y;
-    while (!collides({ ...current, y: ghostY }, 0, 1)) {
-        ghostY++;
-    }
+    while (!collides({ ...current, y: ghostY }, 0, 1)) ghostY++;
     return ghostY;
 }
 
@@ -133,9 +120,7 @@ function lockPiece() {
     if (!current) return;
     current.shape.forEach((row, r) => {
         row.forEach((val, c) => {
-            if (val && current.y + r >= 0) {
-                board[current.y + r][current.x + c] = current.type;
-            }
+            if (val && current.y + r >= 0) board[current.y + r][current.x + c] = current.type;
         });
     });
     clearLines();
@@ -179,9 +164,7 @@ function spawnPiece() {
     next = randomPiece();
     canHold = true;
     drawNext();
-    if (collides(current)) {
-        gameOver();
-    }
+    if (collides(current)) gameOver();
 }
 
 function drawPreview(canvas, ctx, piece, blockSize) {
@@ -189,7 +172,6 @@ function drawPreview(canvas, ctx, piece, blockSize) {
     ctx.fillStyle = '#0f0f23';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (!piece) return;
-
     const shape = piece.shape;
     const rows = shape.length;
     const cols = shape[0].length;
@@ -197,7 +179,6 @@ function drawPreview(canvas, ctx, piece, blockSize) {
     const totalH = rows * blockSize;
     const offsetX = Math.floor((canvas.width - totalW) / 2);
     const offsetY = Math.floor((canvas.height - totalH) / 2);
-
     shape.forEach((row, r) => {
         row.forEach((val, c) => {
             if (val) {
@@ -208,13 +189,8 @@ function drawPreview(canvas, ctx, piece, blockSize) {
     });
 }
 
-function drawHold() {
-    drawPreview(holdCanvas, holdCtx, hold, HOLD_BLOCK);
-}
-
-function drawNext() {
-    drawPreview(nextCanvas, nextCtx, next, NEXT_BLOCK);
-}
+function drawHold() { drawPreview(holdCanvas, holdCtx, hold, HOLD_BLOCK); }
+function drawNext() { drawPreview(nextCanvas, nextCtx, next, NEXT_BLOCK); }
 
 function holdPiece() {
     if (!canHold || isPaused || isGameOver || !current) return;
@@ -225,12 +201,7 @@ function holdPiece() {
     } else {
         const temp = hold;
         hold = { type: current.type, shape: SHAPES[current.type].map(r => [...r]) };
-        current = {
-            type: temp.type,
-            shape: temp.shape.map(r => [...r]),
-            x: 3,
-            y: 0
-        };
+        current = { type: temp.type, shape: temp.shape.map(r => [...r]), x: 3, y: 0 };
         if (collides(current)) current.y = 0;
     }
     drawHold();
@@ -239,16 +210,10 @@ function holdPiece() {
 function draw() {
     ctx.fillStyle = '#0f0f23';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Grid lines
     ctx.strokeStyle = '#16213e';
     for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-            ctx.strokeRect(c * BLOCK, r * BLOCK, BLOCK, BLOCK);
-        }
+        for (let c = 0; c < COLS; c++) ctx.strokeRect(c * BLOCK, r * BLOCK, BLOCK, BLOCK);
     }
-
-    // Locked pieces
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
             if (board[r][c]) {
@@ -257,8 +222,6 @@ function draw() {
             }
         }
     }
-
-    // Ghost piece
     if (current && current.shape && !isPaused) {
         const ghostY = getGhostY();
         if (ghostY !== current.y) {
@@ -268,9 +231,7 @@ function draw() {
             current.shape.forEach((row, r) => {
                 row.forEach((val, c) => {
                     if (val) {
-                        const x = (current.x + c) * BLOCK;
-                        const y = (ghostY + r) * BLOCK;
-                        ctx.strokeRect(x + 2, y + 2, BLOCK - 4, BLOCK - 4);
+                        ctx.strokeRect((current.x + c) * BLOCK + 2, (ghostY + r) * BLOCK + 2, BLOCK - 4, BLOCK - 4);
                     }
                 });
             });
@@ -278,8 +239,6 @@ function draw() {
             ctx.lineWidth = 1;
         }
     }
-
-    // Current piece
     if (current && current.shape) {
         current.shape.forEach((row, r) => {
             row.forEach((val, c) => {
@@ -290,7 +249,6 @@ function draw() {
             });
         });
     }
-
     if (isPaused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -299,18 +257,15 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('Press Q to resume', canvas.width / 2, canvas.height / 2 + 35);
+        ctx.fillText('Tap pause button', canvas.width / 2, canvas.height / 2 + 35);
     }
 }
 
 function update(time = 0) {
     if (isPaused || isGameOver) return;
     if (time - lastDrop > dropInterval) {
-        if (current && !collides(current, 0, 1)) {
-            current.y++;
-        } else if (current) {
-            lockPiece();
-        }
+        if (current && !collides(current, 0, 1)) current.y++;
+        else if (current) lockPiece();
         lastDrop = time;
     }
     draw();
@@ -376,46 +331,65 @@ function togglePause() {
 
 document.addEventListener('keydown', (e) => {
     if (isGameOver) return;
-
     if (e.key.toLowerCase() === 'q') {
         e.preventDefault();
         togglePause();
         return;
     }
-
     if (isPaused || !current) return;
-
     switch (e.key.toLowerCase()) {
-        case 'arrowleft':
-        case 'a':
+        case 'arrowleft': case 'a':
             if (!collides(current, -1, 0)) current.x--;
             break;
-        case 'arrowright':
-        case 'd':
+        case 'arrowright': case 'd':
             if (!collides(current, 1, 0)) current.x++;
             break;
-        case 'arrowdown':
-        case 's':
+        case 'arrowdown': case 's':
             if (!collides(current, 0, 1)) current.y++;
             break;
-        case 'arrowup':
-        case 'w':
+        case 'arrowup': case 'w':
             const rotated = rotate(current.shape);
             if (!collides(current, 0, 0, rotated)) current.shape = rotated;
             break;
-        case ' ':
-        case 'space':
+        case ' ': case 'space':
             e.preventDefault();
             hardDrop();
             break;
-        case 'c':
-        case 'h':
+        case 'c': case 'h':
             holdPiece();
             break;
     }
     draw();
 });
 
+// Touch controls
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+}, {passive: false});
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (isPaused || isGameOver || !current) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) < 25 && Math.abs(dy) < 25) {
+        // Tap = rotate
+        const rotated = rotate(current.shape);
+        if (!collides(current, 0, 0, rotated)) current.shape = rotated;
+    } else if (Math.abs(dx) > Math.abs(dy)) {
+        // Horizontal swipe = move
+        if (dx > 0 && !collides(current, 1, 0)) current.x++;
+        if (dx < 0 && !collides(current, -1, 0)) current.x--;
+    } else if (dy > 40) {
+        // Down swipe = soft drop
+        if (!collides(current, 0, 1)) current.y++;
+    }
+    draw();
+}, {passive: false});
+
+if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
 retryBtn.addEventListener('click', startGame);
 
 updateTop5Display();
