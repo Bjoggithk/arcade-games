@@ -94,13 +94,28 @@ canvas {
 }
 
 .top-scores li {
-    padding: 5px 0;
+    padding: 8px 0;
     border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .top-scores li.top5 {
     font-weight: bold;
+}
+
+.top-scores .rank {
+    color: #aaa;
+    font-size: 0.9em;
+    font-weight: normal;
+    min-width: 30px;
+}
+
+.top-scores .score-value {
     color: #00ff88;
+    font-size: 1.3em;
+    font-weight: bold;
 }
 
 .overlay {
@@ -150,12 +165,27 @@ canvas {
 }
 
 .overlay .top10-list li {
-    padding: 4px 0;
+    padding: 6px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .overlay .top10-list li.top5 {
     font-weight: bold;
+}
+
+.overlay .top10-list .rank {
+    color: #aaa;
+    font-size: 0.9em;
+    font-weight: normal;
+    min-width: 30px;
+}
+
+.overlay .top10-list .score-value {
     color: #00ff88;
+    font-size: 1.2em;
+    font-weight: bold;
 }
 
 .buttons {
