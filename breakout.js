@@ -15,6 +15,8 @@ let paddle = { x: 150, y: 460, width: 100, height: 12, speed: 6 };
 let ball = { x: 200, y: 300, radius: 8, dx: 3, dy: -3 };
 let bricks = [];
 let score = 0;
+let level = 0;
+let baseSpeed = 3;
 let gameLoop;
 let isGameOver = false;
 let isPaused = false;
@@ -28,17 +30,34 @@ const BRICK_PADDING = 5;
 const BRICK_OFFSET_TOP = 40;
 const BRICK_OFFSET_LEFT = 15;
 
-function initBricks() {
+// 5 different brick formations (true = brick, false = empty)
+const formations = [
+    // Full grid
+    Array(BRICK_ROWS).fill().map(() => Array(BRICK_COLS).fill(true)),
+    // Checkerboard
+    Array(BRICK_ROWS).fill().map((_, r) => Array(BRICK_COLS).fill().map((_, c) => (r + c) % 2 === 0)),
+    // Diamond / triangle
+    Array(BRICK_ROWS).fill().map((_, r) => Array(BRICK_COLS).fill().map((_, c) => Math.abs(c - 3.5) <= (4 - r))),
+    // Rows with gaps
+    Array(BRICK_ROWS).fill().map((_, r) => Array(BRICK_COLS).fill().map((_, c) => r % 2 === 0 || c % 3 !== 1)),
+    // Center dense
+    Array(BRICK_ROWS).fill().map((_, r) => Array(BRICK_COLS).fill().map((_, c) => Math.abs(c - 3.5) < 2.5 || r < 2))
+];
+
+function initBricks(formationIndex) {
     bricks = [];
+    const pattern = formations[formationIndex % formations.length];
     for (let r = 0; r < BRICK_ROWS; r++) {
         for (let c = 0; c < BRICK_COLS; c++) {
-            bricks.push({
-                x: BRICK_OFFSET_LEFT + c * (BRICK_WIDTH + BRICK_PADDING),
-                y: BRICK_OFFSET_TOP + r * (BRICK_HEIGHT + BRICK_PADDING),
-                width: BRICK_WIDTH,
-                height: BRICK_HEIGHT,
-                alive: true
-            });
+            if (pattern[r][c]) {
+                bricks.push({
+                    x: BRICK_OFFSET_LEFT + c * (BRICK_WIDTH + BRICK_PADDING),
+                    y: BRICK_OFFSET_TOP + r * (BRICK_HEIGHT + BRICK_PADDING),
+                    width: BRICK_WIDTH,
+                    height: BRICK_HEIGHT,
+                    alive: true
+                });
+            }
         }
     }
 }
@@ -97,6 +116,12 @@ function draw() {
     ctx.fill();
     ctx.closePath();
 
+    // Level indicator
+    ctx.fillStyle = '#00ff88';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Level ${level + 1}`, 10, 20);
+
     if (isPaused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -107,6 +132,19 @@ function draw() {
         ctx.font = '16px sans-serif';
         ctx.fillText('Press Space to resume', canvas.width / 2, canvas.height / 2 + 40);
     }
+}
+
+function nextLevel() {
+    level++;
+    baseSpeed = 3 + level * 0.4; // marginally faster each level
+    initBricks(level);
+    // Reset ball
+    ball.x = 200;
+    ball.y = 300;
+    ball.dx = baseSpeed * (Math.random() > 0.5 ? 1 : -1);
+    ball.dy = -baseSpeed;
+    score += 50; // small clear bonus
+    currentScoreEl.textContent = score;
 }
 
 function update() {
@@ -124,7 +162,7 @@ function update() {
     ball.x += ball.dx;
     ball.y += ball.dy;
 
-    // Wall collisions — reverse direction AND push ball back inside so it can't get stuck
+    // Wall collisions
     if (ball.x - ball.radius < 0) {
         ball.x = ball.radius;
         ball.dx = Math.abs(ball.dx);
@@ -145,23 +183,23 @@ function update() {
         ball.x < paddle.x + paddle.width) {
         ball.y = paddle.y - ball.radius;
         ball.dy = -Math.abs(ball.dy);
-        // Add a bit of angle based on where it hits the paddle
         const hitPos = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
-        ball.dx = hitPos * 4;
+        ball.dx = hitPos * baseSpeed * 1.3;
     }
 
     // Brick collisions
+    let brickHit = false;
     bricks.forEach(brick => {
         if (brick.alive &&
             ball.x > brick.x && ball.x < brick.x + brick.width &&
             ball.y > brick.y && ball.y < brick.y + brick.height) {
             brick.alive = false;
-            // Determine which side was hit and reverse accordingly
+            brickHit = true;
+
             const overlapLeft = (ball.x + ball.radius) - brick.x;
             const overlapRight = (brick.x + brick.width) - (ball.x - ball.radius);
             const overlapTop = (ball.y + ball.radius) - brick.y;
             const overlapBottom = (brick.y + brick.height) - (ball.y - ball.radius);
-
             const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
 
             if (minOverlap === overlapLeft || minOverlap === overlapRight) {
@@ -178,13 +216,12 @@ function update() {
     // Lose condition
     if (ball.y - ball.radius > canvas.height) {
         gameOver();
+        return;
     }
 
-    // Win condition (all bricks gone)
-    if (bricks.every(b => !b.alive)) {
-        score += 100; // bonus
-        currentScoreEl.textContent = score;
-        gameOver(true);
+    // All bricks cleared → next level
+    if (bricks.length > 0 && bricks.every(b => !b.alive)) {
+        nextLevel();
     }
 }
 
@@ -197,7 +234,7 @@ function gameOver(won = false) {
 
     const rank = topScores.indexOf(score) + 1;
     if (rank <= 10 && rank > 0) {
-        rankInfoEl.textContent = won ? `You cleared the board! Placed #${rank}` : `You placed #${rank} in the Top 10!`;
+        rankInfoEl.textContent = `You placed #${rank} in the Top 10! (Level ${level + 1})`;
         rankInfoEl.style.display = 'block';
         top10ListEl.innerHTML = '<ol>' + topScores.map((s, i) => {
             const cls = i < 5 ? ' class="top5"' : '';
@@ -205,7 +242,7 @@ function gameOver(won = false) {
         }).join('') + '</ol>';
         top10ListEl.style.display = 'block';
     } else {
-        rankInfoEl.textContent = won ? 'Board cleared!' : 'Not in Top 10 this time.';
+        rankInfoEl.textContent = 'Not in Top 10 this time.';
         top10ListEl.style.display = 'none';
     }
 
@@ -217,14 +254,16 @@ function startGame() {
     paddle.x = 150;
     ball.x = 200;
     ball.y = 300;
-    ball.dx = 3;
-    ball.dy = -3;
+    level = 0;
+    baseSpeed = 3;
+    ball.dx = baseSpeed;
+    ball.dy = -baseSpeed;
     score = 0;
     currentScoreEl.textContent = '0';
     isGameOver = false;
     isPaused = false;
     keys = {};
-    initBricks();
+    initBricks(0);
     overlay.classList.remove('active');
     updateTop5Display();
     clearInterval(gameLoop);
