@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper - Arcade Games</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Minesweeper</h1>
+        <div class="game-container">
+            <div class="game-area">
+                <canvas id="gameCanvas" width="400" height="400"></canvas>
+                <div id="overlay" class="overlay">
+                    <h2 id="overlayTitle">Game Over</h2>
+                    <div class="final-score">Time: <span id="finalScore">0</span>s</div>
+                    <div id="rankInfo" class="rank-info"></div>
+                    <div id="top10List" class="top10-list"></div>
+                    <div class="buttons">
+                        <button id="retryBtn">Retry</button>
+                        <button id="backBtn">Back to Games</button>
+                    </div>
+                </div>
+            </div>
+            <div class="scoreboard">
+                <h3>Time</h3>
+                <div class="current-score" id="currentScore">0s</div>
+                <h3>Top 5 (fastest)</h3>
+                <div class="top-scores">
+                    <ol id="top5List"></ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="minesweeper.js"></script>
+</body>
+</html>
