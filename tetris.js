@@ -2,6 +2,8 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const holdCanvas = document.getElementById('holdCanvas');
 const holdCtx = holdCanvas.getContext('2d');
+const nextCanvas = document.getElementById('nextCanvas');
+const nextCtx = nextCanvas.getContext('2d');
 const currentScoreEl = document.getElementById('currentScore');
 const levelDisplay = document.getElementById('levelDisplay');
 const top5ListEl = document.getElementById('top5List');
@@ -10,13 +12,13 @@ const finalScoreEl = document.getElementById('finalScore');
 const rankInfoEl = document.getElementById('rankInfo');
 const top10ListEl = document.getElementById('top10List');
 const retryBtn = document.getElementById('retryBtn');
-const backBtn = document.getElementById('backBtn');
 
 const SCORES_KEY = 'tetrisTopScores';
 const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 const HOLD_BLOCK = 18;
+const NEXT_BLOCK = 14;
 
 const SHAPES = {
     I: [[1,1,1,1]],
@@ -40,6 +42,7 @@ const COLORS = {
 
 let board = [];
 let current = null;
+let next = null;
 let hold = null;
 let canHold = true;
 let score = 0;
@@ -171,35 +174,46 @@ function clearLines() {
 }
 
 function spawnPiece() {
-    current = randomPiece();
+    if (!next) next = randomPiece();
+    current = next;
+    next = randomPiece();
     canHold = true;
+    drawNext();
     if (collides(current)) {
         gameOver();
     }
 }
 
-function drawHold() {
-    holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
-    holdCtx.fillStyle = '#0f0f23';
-    holdCtx.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
-    if (!hold) return;
+function drawPreview(canvas, ctx, piece, blockSize) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#0f0f23';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!piece) return;
 
-    const shape = hold.shape;
+    const shape = piece.shape;
     const rows = shape.length;
     const cols = shape[0].length;
-    const totalW = cols * HOLD_BLOCK;
-    const totalH = rows * HOLD_BLOCK;
-    const offsetX = Math.floor((holdCanvas.width - totalW) / 2);
-    const offsetY = Math.floor((holdCanvas.height - totalH) / 2);
+    const totalW = cols * blockSize;
+    const totalH = rows * blockSize;
+    const offsetX = Math.floor((canvas.width - totalW) / 2);
+    const offsetY = Math.floor((canvas.height - totalH) / 2);
 
     shape.forEach((row, r) => {
         row.forEach((val, c) => {
             if (val) {
-                holdCtx.fillStyle = COLORS[hold.type];
-                holdCtx.fillRect(offsetX + c * HOLD_BLOCK, offsetY + r * HOLD_BLOCK, HOLD_BLOCK - 1, HOLD_BLOCK - 1);
+                ctx.fillStyle = COLORS[piece.type];
+                ctx.fillRect(offsetX + c * blockSize, offsetY + r * blockSize, blockSize - 1, blockSize - 1);
             }
         });
     });
+}
+
+function drawHold() {
+    drawPreview(holdCanvas, holdCtx, hold, HOLD_BLOCK);
+}
+
+function drawNext() {
+    drawPreview(nextCanvas, nextCtx, next, NEXT_BLOCK);
 }
 
 function holdPiece() {
@@ -244,7 +258,7 @@ function draw() {
         }
     }
 
-    // Ghost piece (landing outline)
+    // Ghost piece
     if (current && current.shape && !isPaused) {
         const ghostY = getGhostY();
         if (ghostY !== current.y) {
@@ -333,6 +347,7 @@ function startGame() {
     lines = 0;
     dropInterval = 800;
     hold = null;
+    next = null;
     canHold = true;
     isGameOver = false;
     isPaused = false;
@@ -402,7 +417,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 retryBtn.addEventListener('click', startGame);
-backBtn.addEventListener('click', () => window.location.href = 'index.html');
 
 updateTop5Display();
 startGame();
