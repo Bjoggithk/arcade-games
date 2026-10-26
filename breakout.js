@@ -124,18 +124,26 @@ function update() {
     ball.x += ball.dx;
     ball.y += ball.dy;
 
-    // Wall collisions
-    if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
-        ball.dx = -ball.dx;
+    // Wall collisions — reverse direction AND push ball back inside so it can't get stuck
+    if (ball.x - ball.radius < 0) {
+        ball.x = ball.radius;
+        ball.dx = Math.abs(ball.dx);
+    }
+    if (ball.x + ball.radius > canvas.width) {
+        ball.x = canvas.width - ball.radius;
+        ball.dx = -Math.abs(ball.dx);
     }
     if (ball.y - ball.radius < 0) {
-        ball.dy = -ball.dy;
+        ball.y = ball.radius;
+        ball.dy = Math.abs(ball.dy);
     }
 
     // Paddle collision
     if (ball.y + ball.radius > paddle.y &&
+        ball.y + ball.radius < paddle.y + paddle.height + 10 &&
         ball.x > paddle.x &&
         ball.x < paddle.x + paddle.width) {
+        ball.y = paddle.y - ball.radius;
         ball.dy = -Math.abs(ball.dy);
         // Add a bit of angle based on where it hits the paddle
         const hitPos = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
@@ -148,7 +156,20 @@ function update() {
             ball.x > brick.x && ball.x < brick.x + brick.width &&
             ball.y > brick.y && ball.y < brick.y + brick.height) {
             brick.alive = false;
-            ball.dy = -ball.dy;
+            // Determine which side was hit and reverse accordingly
+            const overlapLeft = (ball.x + ball.radius) - brick.x;
+            const overlapRight = (brick.x + brick.width) - (ball.x - ball.radius);
+            const overlapTop = (ball.y + ball.radius) - brick.y;
+            const overlapBottom = (brick.y + brick.height) - (ball.y - ball.radius);
+
+            const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+            if (minOverlap === overlapLeft || minOverlap === overlapRight) {
+                ball.dx = -ball.dx;
+            } else {
+                ball.dy = -ball.dy;
+            }
+
             score += 10;
             currentScoreEl.textContent = score;
         }
