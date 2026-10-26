@@ -1,8 +1,9 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const holdCanvas = document.getElementById('holdCanvas');
+const holdCtx = holdCanvas.getContext('2d');
 const currentScoreEl = document.getElementById('currentScore');
 const levelDisplay = document.getElementById('levelDisplay');
-const holdDisplay = document.getElementById('holdDisplay');
 const top5ListEl = document.getElementById('top5List');
 const overlay = document.getElementById('overlay');
 const finalScoreEl = document.getElementById('finalScore');
@@ -15,6 +16,7 @@ const SCORES_KEY = 'tetrisTopScores';
 const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
+const HOLD_BLOCK = 20;
 
 const SHAPES = {
     I: [[1,1,1,1]],
@@ -129,7 +131,7 @@ function hardDrop() {
     if (!current || isPaused || isGameOver) return;
     while (!collides(current, 0, 1)) {
         current.y++;
-        score += 2; // small bonus for hard drop
+        score += 2;
     }
     currentScoreEl.textContent = score;
     lockPiece();
@@ -164,6 +166,27 @@ function spawnPiece() {
     }
 }
 
+function drawHold() {
+    holdCtx.fillStyle = '#0f0f23';
+    holdCtx.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
+    if (!hold) return;
+
+    const shape = hold.shape;
+    const rows = shape.length;
+    const cols = shape[0].length;
+    const offsetX = (holdCanvas.width - cols * HOLD_BLOCK) / 2;
+    const offsetY = (holdCanvas.height - rows * HOLD_BLOCK) / 2;
+
+    shape.forEach((row, r) => {
+        row.forEach((val, c) => {
+            if (val) {
+                holdCtx.fillStyle = COLORS[hold.type];
+                holdCtx.fillRect(offsetX + c * HOLD_BLOCK, offsetY + r * HOLD_BLOCK, HOLD_BLOCK - 1, HOLD_BLOCK - 1);
+            }
+        });
+    });
+}
+
 function holdPiece() {
     if (!canHold || isPaused || isGameOver) return;
     canHold = false;
@@ -181,7 +204,7 @@ function holdPiece() {
         };
         if (collides(current)) current.y = 0;
     }
-    holdDisplay.textContent = hold.type;
+    drawHold();
 }
 
 function draw() {
@@ -271,7 +294,7 @@ function startGame() {
     isPaused = false;
     currentScoreEl.textContent = '0';
     levelDisplay.textContent = '1';
-    holdDisplay.textContent = 'None';
+    drawHold();
     overlay.classList.remove('active');
     updateTop5Display();
     spawnPiece();
@@ -293,7 +316,6 @@ function togglePause() {
 document.addEventListener('keydown', (e) => {
     if (isGameOver) return;
 
-    // Pause with Q
     if (e.key.toLowerCase() === 'q') {
         e.preventDefault();
         togglePause();
