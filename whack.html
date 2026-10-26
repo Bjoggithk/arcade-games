@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whack-a-Mole - Arcade Games</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Whack-a-Mole</h1>
+        <div class="game-container">
+            <div class="game-area">
+                <canvas id="gameCanvas" width="400" height="400"></canvas>
+                <div id="overlay" class="overlay">
+                    <h2>Game Over</h2>
+                    <div class="final-score">Score: <span id="finalScore">0</span></div>
+                    <div id="rankInfo" class="rank-info"></div>
+                    <div id="top10List" class="top10-list"></div>
+                    <div class="buttons">
+                        <button id="retryBtn">Retry</button>
+                        <button id="backBtn">Back to Games</button>
+                    </div>
+                </div>
+            </div>
+            <div class="scoreboard">
+                <h3>Score</h3>
+                <div class="current-score" id="currentScore">0</div>
+                <h3>Top 5 Scores</h3>
+                <div class="top-scores">
+                    <ol id="top5List"></ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="whack.js"></script>
+</body>
+</html>
