@@ -40,14 +40,14 @@ function updateTop5Display() {
     top5ListEl.innerHTML = '';
     scores.slice(0, 5).forEach((s, i) => {
         const li = document.createElement('li');
-        li.textContent = `${i + 1}. ${s}`;
+        li.innerHTML = `<span class="rank">#${i + 1}</span><span class="score-value">${s}</span>`;
         li.classList.add('top5');
         top5ListEl.appendChild(li);
     });
     // Fill empty if less than 5
     for (let i = scores.length; i < 5; i++) {
         const li = document.createElement('li');
-        li.textContent = `${i + 1}. ---`;
+        li.innerHTML = `<span class="rank">#${i + 1}</span><span class="score-value">---</span>`;
         top5ListEl.appendChild(li);
     }
 }
@@ -127,10 +127,10 @@ function gameOver() {
     if (rank <= 10 && rank > 0) {
         rankInfoEl.textContent = `You placed #${rank} in the Top 10!`;
         rankInfoEl.style.display = 'block';
-        // Show top 10
+        // Show top 10 with better formatting
         top10ListEl.innerHTML = '<ol>' + topScores.map((s, i) => {
             const cls = i < 5 ? ' class="top5"' : '';
-            return `<li${cls}>${i + 1}. ${s}</li>`;
+            return `<li${cls}><span class="rank">#${i + 1}</span><span class="score-value">${s}</span></li>`;
         }).join('') + '</ol>';
         top10ListEl.style.display = 'block';
     } else {
