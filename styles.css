@@ -1,0 +1,187 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    max-width: 800px;
+    width: 100%;
+    padding: 20px;
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 30px;
+    color: #00ff88;
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.game-card {
+    background: #16213e;
+    border: 2px solid #0f3460;
+    border-radius: 10px;
+    padding: 20px;
+    text-decoration: none;
+    color: #eee;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.game-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 255, 136, 0.3);
+}
+
+.game-card h2 {
+    color: #00ff88;
+    margin-bottom: 10px;
+}
+
+/* Snake game styles */
+.game-container {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.game-area {
+    position: relative;
+}
+
+canvas {
+    border: 3px solid #00ff88;
+    background: #0f0f23;
+    border-radius: 5px;
+}
+
+.scoreboard {
+    background: #16213e;
+    padding: 15px;
+    border-radius: 10px;
+    min-width: 200px;
+}
+
+.scoreboard h3 {
+    color: #00ff88;
+    margin-bottom: 10px;
+}
+
+.current-score {
+    font-size: 1.5em;
+    margin-bottom: 15px;
+}
+
+.top-scores ol {
+    list-style: none;
+    padding: 0;
+}
+
+.top-scores li {
+    padding: 5px 0;
+    border-bottom: 1px solid #0f3460;
+}
+
+.top-scores li.top5 {
+    font-weight: bold;
+    color: #00ff88;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 5px;
+    z-index: 10;
+}
+
+.overlay.active {
+    display: flex;
+}
+
+.overlay h2 {
+    color: #ff4444;
+    margin-bottom: 10px;
+}
+
+.overlay .final-score {
+    font-size: 1.8em;
+    margin-bottom: 15px;
+}
+
+.overlay .rank-info {
+    margin-bottom: 15px;
+    color: #00ff88;
+}
+
+.overlay .top10-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    width: 80%;
+}
+
+.overlay .top10-list ol {
+    list-style: none;
+    padding: 0;
+}
+
+.overlay .top10-list li {
+    padding: 4px 0;
+}
+
+.overlay .top10-list li.top5 {
+    font-weight: bold;
+    color: #00ff88;
+}
+
+.buttons {
+    display: flex;
+    gap: 15px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 1em;
+    background: #00ff88;
+    color: #1a1a2e;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background: #00cc6a;
+}
+
+@media (max-width: 600px) {
+    .game-container {
+        flex-direction: column;
+        align-items: center;
+    }
+}
