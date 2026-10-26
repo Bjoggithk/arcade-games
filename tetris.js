@@ -117,6 +117,15 @@ function collides(piece, dx = 0, dy = 0, shape = piece.shape) {
     return false;
 }
 
+function getGhostY() {
+    if (!current) return 0;
+    let ghostY = current.y;
+    while (!collides({ ...current, y: ghostY }, 0, 1)) {
+        ghostY++;
+    }
+    return ghostY;
+}
+
 function lockPiece() {
     if (!current) return;
     current.shape.forEach((row, r) => {
@@ -232,6 +241,27 @@ function draw() {
                 ctx.fillStyle = COLORS[board[r][c]] || '#fff';
                 ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
             }
+        }
+    }
+
+    // Ghost piece (landing outline)
+    if (current && current.shape && !isPaused) {
+        const ghostY = getGhostY();
+        if (ghostY !== current.y) {
+            ctx.strokeStyle = COLORS[current.type];
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.6;
+            current.shape.forEach((row, r) => {
+                row.forEach((val, c) => {
+                    if (val) {
+                        const x = (current.x + c) * BLOCK;
+                        const y = (ghostY + r) * BLOCK;
+                        ctx.strokeRect(x + 2, y + 2, BLOCK - 4, BLOCK - 4);
+                    }
+                });
+            });
+            ctx.globalAlpha = 1;
+            ctx.lineWidth = 1;
         }
     }
 
