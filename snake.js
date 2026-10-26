@@ -18,6 +18,7 @@ let food = {x: 15, y: 15};
 let score = 0;
 let gameLoop;
 let isGameOver = false;
+let isPaused = false;
 
 const SCORES_KEY = 'snakeTopScores';
 
@@ -65,10 +66,22 @@ function draw() {
         ctx.fillStyle = index === 0 ? '#00cc6a' : '#00ff88';
         ctx.fillRect(segment.x * GRID_SIZE, segment.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
     });
+
+    // Draw pause indicator
+    if (isPaused) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00ff88';
+        ctx.font = 'bold 30px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+        ctx.font = '16px sans-serif';
+        ctx.fillText('Press Space to resume', canvas.width / 2, canvas.height / 2 + 40);
+    }
 }
 
 function update() {
-    if (direction.x === 0 && direction.y === 0) return;
+    if (isPaused || (direction.x === 0 && direction.y === 0)) return;
 
     const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
 
@@ -105,6 +118,7 @@ function placeFood() {
 
 function gameOver() {
     isGameOver = true;
+    isPaused = false;
     clearInterval(gameLoop);
     const topScores = saveScore(score);
     finalScoreEl.textContent = score;
@@ -134,6 +148,7 @@ function startGame() {
     score = 0;
     currentScoreEl.textContent = '0';
     isGameOver = false;
+    isPaused = false;
     placeFood();
     overlay.classList.remove('active');
     updateTop5Display();
@@ -145,20 +160,48 @@ function startGame() {
     draw();
 }
 
+function togglePause() {
+    if (isGameOver) return;
+    isPaused = !isPaused;
+    if (isPaused) {
+        clearInterval(gameLoop);
+    } else {
+        gameLoop = setInterval(() => {
+            update();
+            draw();
+        }, 120);
+    }
+    draw();
+}
+
 // Controls
 document.addEventListener('keydown', (e) => {
     if (isGameOver) return;
-    switch (e.key) {
-        case 'ArrowUp':
+
+    // Pause with space
+    if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+        return;
+    }
+
+    if (isPaused) return;
+
+    switch (e.key.toLowerCase()) {
+        case 'arrowup':
+        case 'w':
             if (direction.y === 0) direction = {x: 0, y: -1};
             break;
-        case 'ArrowDown':
+        case 'arrowdown':
+        case 's':
             if (direction.y === 0) direction = {x: 0, y: 1};
             break;
-        case 'ArrowLeft':
+        case 'arrowleft':
+        case 'a':
             if (direction.x === 0) direction = {x: -1, y: 0};
             break;
-        case 'ArrowRight':
+        case 'arrowright':
+        case 'd':
             if (direction.x === 0) direction = {x: 1, y: 0};
             break;
     }
