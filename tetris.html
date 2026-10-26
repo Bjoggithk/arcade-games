@@ -6,6 +6,15 @@
     <title>Tetris - Arcade Games</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        #holdCanvas {
+            border: 2px solid #0f3460 !important;
+            background: #0f0f23;
+            border-radius: 6px;
+            margin: 0 auto 15px auto;
+            display: block;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -30,7 +39,7 @@
                 <h3>Level</h3>
                 <div class="current-score" id="levelDisplay">1</div>
                 <h3>Hold</h3>
-                <canvas id="holdCanvas" width="120" height="80" style="background:#0f0f23; border-radius:6px; margin-bottom:15px; display:block;"></canvas>
+                <canvas id="holdCanvas" width="120" height="80"></canvas>
                 <h3>Top 5 Scores</h3>
                 <div class="top-scores">
                     <ol id="top5List"></ol>
