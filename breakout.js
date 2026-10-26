@@ -7,7 +7,7 @@ const finalScoreEl = document.getElementById('finalScore');
 const rankInfoEl = document.getElementById('rankInfo');
 const top10ListEl = document.getElementById('top10List');
 const retryBtn = document.getElementById('retryBtn');
-const backBtn = document.getElementById('backBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 
 const SCORES_KEY = 'breakoutTopScores';
 
@@ -21,6 +21,7 @@ let gameLoop;
 let isGameOver = false;
 let isPaused = false;
 let keys = {};
+let touchMove = 0; // -1 left, 1 right, 0 none
 
 const BRICK_ROWS = 5;
 const BRICK_COLS = 8;
@@ -30,17 +31,11 @@ const BRICK_PADDING = 5;
 const BRICK_OFFSET_TOP = 40;
 const BRICK_OFFSET_LEFT = 15;
 
-// 5 different brick formations (true = brick, false = empty)
 const formations = [
-    // Full grid
     Array(BRICK_ROWS).fill().map(() => Array(BRICK_COLS).fill(true)),
-    // Checkerboard
     Array(BRICK_ROWS).fill().map((_, r) => Array(BRICK_COLS).fill().map((_, c) => (r + c) % 2 === 0)),
-    // Diamond / triangle
     Array(BRICK_ROWS).fill().map((_, r) => Array(BRICK_COLS).fill().map((_, c) => Math.abs(c - 3.5) <= (4 - r))),
-    // Rows with gaps
     Array(BRICK_ROWS).fill().map((_, r) => Array(BRICK_COLS).fill().map((_, c) => r % 2 === 0 || c % 3 !== 1)),
-    // Center dense
     Array(BRICK_ROWS).fill().map((_, r) => Array(BRICK_COLS).fill().map((_, c) => Math.abs(c - 3.5) < 2.5 || r < 2))
 ];
 
@@ -95,7 +90,6 @@ function draw() {
     ctx.fillStyle = '#0f0f23';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Bricks
     bricks.forEach(brick => {
         if (brick.alive) {
             ctx.fillStyle = '#00ff88';
@@ -105,18 +99,15 @@ function draw() {
         }
     });
 
-    // Paddle
     ctx.fillStyle = '#00cc6a';
     ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
 
-    // Ball
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     ctx.fillStyle = '#ff4444';
     ctx.fill();
     ctx.closePath();
 
-    // Level indicator
     ctx.fillStyle = '#00ff88';
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'left';
@@ -130,39 +121,35 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('Press Space to resume', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText('Tap pause button', canvas.width / 2, canvas.height / 2 + 40);
     }
 }
 
 function nextLevel() {
     level++;
-    baseSpeed = 3 + level * 0.4; // marginally faster each level
+    baseSpeed = 3 + level * 0.4;
     initBricks(level);
-    // Reset ball
     ball.x = 200;
     ball.y = 300;
     ball.dx = baseSpeed * (Math.random() > 0.5 ? 1 : -1);
     ball.dy = -baseSpeed;
-    score += 50; // small clear bonus
+    score += 50;
     currentScoreEl.textContent = score;
 }
 
 function update() {
     if (isPaused || isGameOver) return;
 
-    // Paddle movement
-    if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+    if (keys['ArrowLeft'] || keys['a'] || keys['A'] || touchMove < 0) {
         paddle.x = Math.max(0, paddle.x - paddle.speed);
     }
-    if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+    if (keys['ArrowRight'] || keys['d'] || keys['D'] || touchMove > 0) {
         paddle.x = Math.min(canvas.width - paddle.width, paddle.x + paddle.speed);
     }
 
-    // Ball movement
     ball.x += ball.dx;
     ball.y += ball.dy;
 
-    // Wall collisions
     if (ball.x - ball.radius < 0) {
         ball.x = ball.radius;
         ball.dx = Math.abs(ball.dx);
@@ -176,7 +163,6 @@ function update() {
         ball.dy = Math.abs(ball.dy);
     }
 
-    // Paddle collision
     if (ball.y + ball.radius > paddle.y &&
         ball.y + ball.radius < paddle.y + paddle.height + 10 &&
         ball.x > paddle.x &&
@@ -187,39 +173,31 @@ function update() {
         ball.dx = hitPos * baseSpeed * 1.3;
     }
 
-    // Brick collisions
-    let brickHit = false;
     bricks.forEach(brick => {
         if (brick.alive &&
             ball.x > brick.x && ball.x < brick.x + brick.width &&
             ball.y > brick.y && ball.y < brick.y + brick.height) {
             brick.alive = false;
-            brickHit = true;
-
             const overlapLeft = (ball.x + ball.radius) - brick.x;
             const overlapRight = (brick.x + brick.width) - (ball.x - ball.radius);
             const overlapTop = (ball.y + ball.radius) - brick.y;
             const overlapBottom = (brick.y + brick.height) - (ball.y - ball.radius);
             const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-
             if (minOverlap === overlapLeft || minOverlap === overlapRight) {
                 ball.dx = -ball.dx;
             } else {
                 ball.dy = -ball.dy;
             }
-
             score += 10;
             currentScoreEl.textContent = score;
         }
     });
 
-    // Lose condition
     if (ball.y - ball.radius > canvas.height) {
         gameOver();
         return;
     }
 
-    // All bricks cleared → next level
     if (bricks.length > 0 && bricks.every(b => !b.alive)) {
         nextLevel();
     }
@@ -231,7 +209,6 @@ function gameOver(won = false) {
     clearInterval(gameLoop);
     const topScores = saveScore(score);
     finalScoreEl.textContent = score;
-
     const rank = topScores.indexOf(score) + 1;
     if (rank <= 10 && rank > 0) {
         rankInfoEl.textContent = `You placed #${rank} in the Top 10! (Level ${level + 1})`;
@@ -245,7 +222,6 @@ function gameOver(won = false) {
         rankInfoEl.textContent = 'Not in Top 10 this time.';
         top10ListEl.style.display = 'none';
     }
-
     overlay.classList.add('active');
     updateTop5Display();
 }
@@ -263,6 +239,7 @@ function startGame() {
     isGameOver = false;
     isPaused = false;
     keys = {};
+    touchMove = 0;
     initBricks(0);
     overlay.classList.remove('active');
     updateTop5Display();
@@ -301,11 +278,30 @@ document.addEventListener('keyup', (e) => {
     keys[e.key] = false;
 });
 
-retryBtn.addEventListener('click', startGame);
-backBtn.addEventListener('click', () => {
-    window.location.href = 'index.html';
-});
+// Touch controls: hold left/right half of canvas
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (isGameOver || isPaused) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.touches[0].clientX - rect.left;
+    touchMove = x < canvas.width / 2 ? -1 : 1;
+}, {passive: false});
 
-// Init
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (isGameOver || isPaused) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.touches[0].clientX - rect.left;
+    touchMove = x < canvas.width / 2 ? -1 : 1;
+}, {passive: false});
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    touchMove = 0;
+}, {passive: false});
+
+if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
+retryBtn.addEventListener('click', startGame);
+
 updateTop5Display();
 startGame();
