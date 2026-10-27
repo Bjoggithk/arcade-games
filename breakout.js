@@ -10,6 +10,7 @@ const retryBtn = document.getElementById('retryBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 
 const SCORES_KEY = 'breakoutTopScores';
+const LAST_NAME_KEY = 'lastPlayerName';
 
 let paddle = { x: 150, y: 460, width: 100, height: 12, speed: 6 };
 let ball = { x: 200, y: 300, radius: 8, dx: 3, dy: -3 };
@@ -21,7 +22,7 @@ let gameLoop;
 let isGameOver = false;
 let isPaused = false;
 let keys = {};
-let touchMove = 0; // -1 left, 1 right, 0 none
+let touchMove = 0;
 
 const BRICK_ROWS = 5;
 const BRICK_COLS = 8;
@@ -57,15 +58,34 @@ function initBricks(formationIndex) {
     }
 }
 
+function migrateScores(scores) {
+    return scores.map(s => typeof s === 'number' ? { name: 'Bjöggi', score: s } : s);
+}
+
 function getTopScores() {
-    const scores = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
-    return scores.sort((a, b) => b - a).slice(0, 10);
+    let scores = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
+    scores = migrateScores(scores);
+    return scores.sort((a, b) => b.score - a.score).slice(0, 10);
+}
+
+function getLastName() {
+    return localStorage.getItem(LAST_NAME_KEY) || '';
+}
+
+function setLastName(name) {
+    if (name) localStorage.setItem(LAST_NAME_KEY, name);
 }
 
 function saveScore(newScore) {
     let scores = getTopScores();
-    scores.push(newScore);
-    scores = scores.sort((a, b) => b - a).slice(0, 10);
+    const lastName = getLastName();
+    let name = prompt('Enter your name for the high score:', lastName || 'Bjöggi');
+    if (name === null) name = lastName || 'Bjöggi';
+    name = (name || 'Anonymous').trim().slice(0, 20);
+    setLastName(name);
+
+    scores.push({ name, score: newScore });
+    scores = scores.sort((a, b) => b.score - a.score).slice(0, 10);
     localStorage.setItem(SCORES_KEY, JSON.stringify(scores));
     return scores;
 }
@@ -75,7 +95,7 @@ function updateTop5Display() {
     top5ListEl.innerHTML = '';
     scores.slice(0, 5).forEach((s, i) => {
         const li = document.createElement('li');
-        li.innerHTML = `<span class="rank">#${i + 1}</span><span class="score-value">${s}</span>`;
+        li.innerHTML = `<span class="rank">#${i + 1}</span><span class="score-value">${s.name}: ${s.score}</span>`;
         li.classList.add('top5');
         top5ListEl.appendChild(li);
     });
@@ -209,13 +229,13 @@ function gameOver(won = false) {
     clearInterval(gameLoop);
     const topScores = saveScore(score);
     finalScoreEl.textContent = score;
-    const rank = topScores.indexOf(score) + 1;
+    const rank = topScores.findIndex(s => s.score === score) + 1;
     if (rank <= 10 && rank > 0) {
         rankInfoEl.textContent = `You placed #${rank} in the Top 10! (Level ${level + 1})`;
         rankInfoEl.style.display = 'block';
         top10ListEl.innerHTML = '<ol>' + topScores.map((s, i) => {
             const cls = i < 5 ? ' class="top5"' : '';
-            return `<li${cls}><span class="rank">#${i + 1}</span><span class="score-value">${s}</span></li>`;
+            return `<li${cls}><span class="rank">#${i + 1}</span><span class="score-value">${s.name}: ${s.score}</span></li>`;
         }).join('') + '</ol>';
         top10ListEl.style.display = 'block';
     } else {
@@ -278,7 +298,6 @@ document.addEventListener('keyup', (e) => {
     keys[e.key] = false;
 });
 
-// Touch controls: hold left/right half of canvas
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (isGameOver || isPaused) return;
