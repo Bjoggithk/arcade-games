@@ -10,6 +10,7 @@ const retryBtn = document.getElementById('retryBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 
 const SCORES_KEY = 'flappyTopScores';
+const LAST_NAME_KEY = 'lastPlayerName';
 
 let bird = { x: 80, y: 250, radius: 15, velocity: 0, gravity: 0.4, jump: -7 };
 let pipes = [];
@@ -19,15 +20,34 @@ let isGameOver = false;
 let isPaused = false;
 let frame = 0;
 
+function migrateScores(scores) {
+    return scores.map(s => typeof s === 'number' ? { name: 'Bjöggi', score: s } : s);
+}
+
 function getTopScores() {
-    const scores = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
-    return scores.sort((a, b) => b - a).slice(0, 10);
+    let scores = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
+    scores = migrateScores(scores);
+    return scores.sort((a, b) => b.score - a.score).slice(0, 10);
+}
+
+function getLastName() {
+    return localStorage.getItem(LAST_NAME_KEY) || '';
+}
+
+function setLastName(name) {
+    if (name) localStorage.setItem(LAST_NAME_KEY, name);
 }
 
 function saveScore(newScore) {
     let scores = getTopScores();
-    scores.push(newScore);
-    scores = scores.sort((a, b) => b - a).slice(0, 10);
+    const lastName = getLastName();
+    let name = prompt('Enter your name for the high score:', lastName || 'Bjöggi');
+    if (name === null) name = lastName || 'Bjöggi';
+    name = (name || 'Anonymous').trim().slice(0, 20);
+    setLastName(name);
+
+    scores.push({ name, score: newScore });
+    scores = scores.sort((a, b) => b.score - a.score).slice(0, 10);
     localStorage.setItem(SCORES_KEY, JSON.stringify(scores));
     return scores;
 }
@@ -37,7 +57,7 @@ function updateTop5Display() {
     top5ListEl.innerHTML = '';
     scores.slice(0, 5).forEach((s, i) => {
         const li = document.createElement('li');
-        li.innerHTML = `<span class="rank">#${i + 1}</span><span class="score-value">${s}</span>`;
+        li.innerHTML = `<span class="rank">#${i + 1}</span><span class="score-value">${s.name}: ${s.score}</span>`;
         li.classList.add('top5');
         top5ListEl.appendChild(li);
     });
@@ -125,13 +145,13 @@ function gameOver() {
     clearInterval(gameLoop);
     const topScores = saveScore(score);
     finalScoreEl.textContent = score;
-    const rank = topScores.indexOf(score) + 1;
+    const rank = topScores.findIndex(s => s.score === score) + 1;
     if (rank <= 10 && rank > 0) {
         rankInfoEl.textContent = `You placed #${rank} in the Top 10!`;
         rankInfoEl.style.display = 'block';
         top10ListEl.innerHTML = '<ol>' + topScores.map((s, i) => {
             const cls = i < 5 ? ' class="top5"' : '';
-            return `<li${cls}><span class="rank">#${i + 1}</span><span class="score-value">${s}</span></li>`;
+            return `<li${cls}><span class="rank">#${i + 1}</span><span class="score-value">${s.name}: ${s.score}</span></li>`;
         }).join('') + '</ol>';
         top10ListEl.style.display = 'block';
     } else {
